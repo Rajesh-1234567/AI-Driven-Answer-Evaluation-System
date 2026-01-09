@@ -14,4 +14,8 @@ data/
 
 # PDFs
 *.pdf
+.env
+__pycache__/
+data/
+*.pyc
 

@@ -4,63 +4,42 @@ from google import genai
 import json
 import re
 
-# 🔐 HARD-CODED API KEY (as requested)
-API_KEY = "YOUR KEY"
+API_KEY = "AIzaSyDywrnAzLhBivZW4DVqepCDph8-ufsiln8"
 
 
 def evaluate_answers(compiled_exam: str, evaluation_style: str, student_text: str):
     client = genai.Client(api_key=API_KEY)
 
-    prompt = f"""
-You are an unbiased exam evaluator.
-
-INPUTS:
-1. Exam questions with ideal answers and marks
-2. Teacher evaluation instructions
-3. Student answer sheet text (OCR)
-
-TASK:
-- Match answers to questions automatically
-- Evaluate strictly using ideal answers
-- Award marks per question (do NOT exceed max marks)
-- Give short justification per question
-- Calculate total score
-- Provide overall feedback
-
-RULES:
-- Missing answer = 0 marks
-- Partial answer = partial marks
-- Ignore grammar & handwriting
-- Be consistent
-
-OUTPUT:
-Return ONLY valid JSON in this format:
-
-{{
-  "question_wise_marks": [
-    {{
-      "question_no": 1,
-      "marks_awarded": 3,
-      "max_marks": 5,
-      "reason": "Short explanation"
-    }}
-  ],
-  "total_score": "18/25",
-  "overall_feedback": "Short feedback"
-}}
-
---------------------
-EXAM:
-{compiled_exam}
-
---------------------
-TEACHER INSTRUCTIONS:
-{evaluation_style}
-
---------------------
-STUDENT ANSWERS:
-{student_text}
-"""
+    prompt = (
+        "You are an unbiased exam evaluator.\n\n"
+        "TASKS:\n"
+        "1. Evaluate answers question-wise.\n"
+        "2. Award marks strictly.\n"
+        "3. Give short justification per question.\n"
+        "4. Calculate total score.\n"
+        "5. Detect AI-generated content percentage.\n\n"
+        "RETURN STRICT JSON ONLY:\n"
+        "{\n"
+        '  "question_wise_marks": [\n'
+        "    {\n"
+        '      "question_no": 1,\n'
+        '      "marks_awarded": 3,\n'
+        '      "max_marks": 5,\n'
+        '      "reason": "Explanation"\n'
+        "    }\n"
+        "  ],\n"
+        '  "total_score": "18/25",\n'
+        '  "overall_feedback": "Feedback",\n'
+        '  "ai_content_percentage": 35,\n'
+        '  "ai_analysis_reason": "Reason for AI usage score"\n'
+        "}\n\n"
+        "EXAM:\n"
+        + compiled_exam
+        + "\n\nTEACHER INSTRUCTIONS:\n"
+        + evaluation_style
+        + "\n\nSTUDENT ANSWERS:\n"
+        + student_text
+    )
 
     try:
         response = client.models.generate_content(
@@ -82,4 +61,10 @@ STUDENT ANSWERS:
             "raw_output": text
         }
 
-    return json.loads(match.group())
+    try:
+        return json.loads(match.group())
+    except json.JSONDecodeError:
+        return {
+            "error": "JSON parsing failed",
+            "raw_output": text
+        }
